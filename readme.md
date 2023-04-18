@@ -8,13 +8,18 @@ The project using API: https://petstore.swagger.io/
 Base URL: https://petstore.swagger.io/v2
 
 ## Functionality
+
 ### Features review
+
     1. Using RestAssured
     2. Using Jackson API for work with json
     3. Using POJO
     4. Using Allure Report for reporting
+    
 ## Installation
+
 ### Prerequisites
+
 Before installing the whole project you have to install the following:
 
 1. [Java SDK 17](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
