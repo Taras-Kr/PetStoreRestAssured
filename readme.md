@@ -15,6 +15,12 @@ Base URL: https://petstore.swagger.io/v2
     2. Using Jackson API for work with json
     3. Using POJO
     4. Using Allure Report for reporting
+
+Repository contains Actions for CI flows:
+
+1. Build and run tests
+
+2. Allure reports on the [GitHub Pages](https://taras-kr.github.io/PetStoreRestAssured/)
     
 ## Installation
 
