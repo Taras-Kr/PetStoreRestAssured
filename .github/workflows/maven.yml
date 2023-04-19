@@ -57,7 +57,7 @@ jobs:
         PUBLISH_BRANCH: gh-pages
         PUBLISH_DIR: allure-history
     
-   # - name: Run tests
+    # - name: Run tests
     #  run: mvn test 
    
     # Optional: Uploads the full dependency graph to GitHub to improve the quality of Dependabot alerts this repository can receive
