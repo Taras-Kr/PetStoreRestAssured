@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.krasitskyi.util.DataGenerator;
 import io.qameta.allure.restassured.AllureRestAssured;
 import io.restassured.RestAssured;
 import io.restassured.builder.RequestSpecBuilder;
@@ -19,6 +20,10 @@ import static io.restassured.RestAssured.given;
 
 public class PetAPITest {
     private RequestSpecification requestSpecification;
+    String petNamesFile = "src/test/resources/input_data/pet_names.txt";
+    String petCategoriesFile = "src/test/resources/input_data/pet_categories.txt";
+    private int petId;
+    private int categoryId;
 
     @BeforeTest
     public void buildRequestSpecification() {
@@ -49,17 +54,19 @@ public class PetAPITest {
 
     @Test
     public void verifyCreatePetWithJacksonObj() throws JsonProcessingException {
-        int petId = 987654;
-        String categoryName = "Cats";
-        String petName = "Kitty";
+        petId = new DataGenerator().getRandomId(100000000, 999999999);
+
+        String categoryName = DataGenerator.getRandomValueFromList(DataGenerator.getListFromFile(petCategoriesFile));
+        String petName = DataGenerator.getRandomValueFromList(DataGenerator.getListFromFile(petNamesFile));
         List<String> photoUrlsList = Arrays.asList("www.url1.com", "www.url2.com", "www.url3.com");
+
         String petStatus = "sold";
 
         ObjectMapper objectMapper = new ObjectMapper();
         ObjectNode petNode = objectMapper.createObjectNode();
         petNode.put("id", petId);
 
-        int categoryId = 1;
+        categoryId = new DataGenerator().getId(1, 100);
 
         ObjectNode categoryNode = objectMapper.createObjectNode();
         categoryNode.put("id", categoryId);
@@ -98,18 +105,16 @@ public class PetAPITest {
     @Test
     public void verifyGetPetById() {
 
-        String petId = "987654";
         given()
                 .spec(requestSpecification)
                 .when()
-                .get(petId)
+                .get(String.valueOf(petId))
                 .then()
                 .statusCode(200);
     }
 
     @Test
     public void verifyUpdateExistingPetByIdWithJacksonObj() {
-        int petId = 987654;
         String categoryName = "Cats Upd";
         String petName = "Kitty Cat";
         List<String> photoUrlsList = Arrays.asList("www.url1.com", "www.url2.com", "www.url3.com");
@@ -118,8 +123,6 @@ public class PetAPITest {
         ObjectMapper objectMapper = new ObjectMapper();
         ObjectNode petNode = objectMapper.createObjectNode();
         petNode.put("id", petId);
-
-        int categoryId = 1;
 
         ObjectNode categoryNode = objectMapper.createObjectNode();
         categoryNode.put("id", categoryId);
@@ -161,7 +164,7 @@ public class PetAPITest {
 
     @Test
     public void verifyUpdateExistingPetWithFormData() {
-        int petId = 987654;
+
         String updatedName = "KittyCat UP";
         String updatedStatus = "available";
         given()
@@ -178,23 +181,24 @@ public class PetAPITest {
     @Test
     public void verifyDeletePetById() {
 
-        String petId = "987654";
         given()
                 .spec(requestSpecification)
                 .when()
-                .delete(petId)
+                .delete(String.valueOf(petId))
                 .then()
                 .statusCode(200);
     }
 
     @Test
     public void verifyCreatePetWithPOJO() {
-        Category category = Category.builder().id(1).name("POJOCats").build();
+        categoryId = new DataGenerator().getId(1, 100);
+        Category category = Category.builder().id(categoryId).name("POJOCats").build();
         Tag tag1 = Tag.builder().id(1).name("tagN1").build();
         Tag tag2 = Tag.builder().id(2).name("tagN2").build();
 
+        petId = new DataGenerator().getRandomId(100000000, 999999999);
         Pet pet = Pet.builder()
-                .id(987654)
+                .id(petId)
                 .category(category)
                 .name("KittyOBJ")
                 .photoUrls(Arrays.asList("www.photo1.com", "www.photo2.com"))
