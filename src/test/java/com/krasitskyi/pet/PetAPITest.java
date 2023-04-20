@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.krasitskyi.util.DataGenerator;
+import io.qameta.allure.Description;
 import io.qameta.allure.restassured.AllureRestAssured;
 import io.restassured.RestAssured;
 import io.restassured.builder.RequestSpecBuilder;
@@ -40,6 +41,7 @@ public class PetAPITest {
     }
 
     @Test
+    @Description("Verifies API find pet by Id: GET https://petstore.swagger.io/v2/pet/findByStatus")
     public void verifyGetPetsByStatus() {
 
         String paramStatus = "sold";
@@ -53,6 +55,7 @@ public class PetAPITest {
     }
 
     @Test
+    @Description("Verifies API Add a new pet to the store using Jackson: POST https://petstore.swagger.io/v2/pet")
     public void verifyCreatePetWithJacksonObj() throws JsonProcessingException {
         petId = DataGenerator.getRandomId(100000000, 999999999);
 
@@ -103,6 +106,7 @@ public class PetAPITest {
     }
 
     @Test
+    @Description("Verifies API find pet by Id: GET https://petstore.swagger.io/v2/pet/{petID}")
     public void verifyGetPetById() {
 
         given()
@@ -114,6 +118,7 @@ public class PetAPITest {
     }
 
     @Test
+    @Description("Verifies API Update an existing pet using Jackson: PUT https://petstore.swagger.io/v2/pet/ ")
     public void verifyUpdateExistingPetByIdWithJacksonObj() {
         String categoryName = "Cats Upd";
         String petName = "Kitty Cat";
@@ -163,6 +168,7 @@ public class PetAPITest {
     }
 
     @Test
+    @Description("Verifies API Update an existing pet using form data: PUT https://petstore.swagger.io/v2/pet/{petId}")
     public void verifyUpdateExistingPetWithFormData() {
 
         String updatedName = "KittyCat UP";
@@ -179,6 +185,7 @@ public class PetAPITest {
     }
 
     @Test
+    @Description("Verifies API Delete pet: DELETE https://petstore.swagger.io/v2/pet/{petID}")
     public void verifyDeletePetById() {
 
         given()
@@ -190,6 +197,7 @@ public class PetAPITest {
     }
 
     @Test
+    @Description("Verifies API Add a new pet to the store using POJO: POST https://petstore.swagger.io/v2/pet")
     public void verifyCreatePetWithPOJO() {
         categoryId = DataGenerator.getId(1, 100);
         Category category = Category.builder().id(categoryId).name("POJOCats").build();
