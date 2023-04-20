@@ -14,7 +14,7 @@ public class DataGenerator {
         return (int) (Math.random() * (max - min) + min);
     }
 
-    public int getRandomId(int min, int max) {
+    public static int getRandomId(int min, int max) {
         return new Random().nextInt(max - min) + min;
     }
 

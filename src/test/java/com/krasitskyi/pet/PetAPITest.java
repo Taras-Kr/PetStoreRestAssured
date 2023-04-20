@@ -54,7 +54,7 @@ public class PetAPITest {
 
     @Test
     public void verifyCreatePetWithJacksonObj() throws JsonProcessingException {
-        petId = new DataGenerator().getRandomId(100000000, 999999999);
+        petId = DataGenerator.getRandomId(100000000, 999999999);
 
         String categoryName = DataGenerator.getRandomValueFromList(DataGenerator.getListFromFile(petCategoriesFile));
         String petName = DataGenerator.getRandomValueFromList(DataGenerator.getListFromFile(petNamesFile));
@@ -66,7 +66,7 @@ public class PetAPITest {
         ObjectNode petNode = objectMapper.createObjectNode();
         petNode.put("id", petId);
 
-        categoryId = new DataGenerator().getId(1, 100);
+        categoryId = DataGenerator.getId(1, 100);
 
         ObjectNode categoryNode = objectMapper.createObjectNode();
         categoryNode.put("id", categoryId);
@@ -191,12 +191,12 @@ public class PetAPITest {
 
     @Test
     public void verifyCreatePetWithPOJO() {
-        categoryId = new DataGenerator().getId(1, 100);
+        categoryId = DataGenerator.getId(1, 100);
         Category category = Category.builder().id(categoryId).name("POJOCats").build();
         Tag tag1 = Tag.builder().id(1).name("tagN1").build();
         Tag tag2 = Tag.builder().id(2).name("tagN2").build();
 
-        petId = new DataGenerator().getRandomId(100000000, 999999999);
+        petId = DataGenerator.getRandomId(100000000, 999999999);
         Pet pet = Pet.builder()
                 .id(petId)
                 .category(category)
