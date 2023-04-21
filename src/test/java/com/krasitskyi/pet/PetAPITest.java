@@ -10,7 +10,12 @@ import io.qameta.allure.restassured.AllureRestAssured;
 import io.restassured.RestAssured;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.http.ContentType;
+import io.restassured.path.json.JsonPath;
+import io.restassured.response.Response;
+import io.restassured.response.ValidatableResponse;
 import io.restassured.specification.RequestSpecification;
+import org.assertj.core.api.SoftAssertions;
+import org.hamcrest.Matchers;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
@@ -18,6 +23,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.*;
 
 public class PetAPITest {
     private RequestSpecification requestSpecification;
@@ -25,6 +31,8 @@ public class PetAPITest {
     String petCategoriesFile = "src/test/resources/input_data/pet_categories.txt";
     private int petId;
     private int categoryId;
+    private SoftAssertions softAssert = new SoftAssertions();
+
 
     @BeforeTest
     public void buildRequestSpecification() {
@@ -33,6 +41,8 @@ public class PetAPITest {
                 .setContentType(ContentType.JSON)
                 .setBasePath("/v2/pet/")
                 .build();
+
+
     }
 
     @BeforeTest
@@ -96,12 +106,20 @@ public class PetAPITest {
 
         String petPlainJsonObject = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(petNode);
 
-        given()
+        Response response = given()
                 .spec(requestSpecification)
                 .body(petPlainJsonObject)
                 .when()
-                .post()
+                .post();
+
+        response
                 .then()
+                .body("id", Matchers.is(petId))
+                .body("category.id", Matchers.is(categoryId))
+                .body("category.name", Matchers.is(categoryName))
+                .body("photoUrls", Matchers.is(photoUrlsList))
+                .body("status", Matchers.is(petStatus))
+
                 .statusCode(200);
     }
 
@@ -114,7 +132,8 @@ public class PetAPITest {
                 .when()
                 .get(String.valueOf(petId))
                 .then()
-                .statusCode(200);
+                .statusCode(200)
+                .body("id", Matchers.is(petId)) ;
     }
 
     @Test
@@ -188,12 +207,26 @@ public class PetAPITest {
     @Description("Verifies API Delete pet: DELETE https://petstore.swagger.io/v2/pet/{petID}")
     public void verifyDeletePetById() {
 
-        given()
+        Response response = given()
                 .spec(requestSpecification)
                 .when()
-                .delete(String.valueOf(petId))
-                .then()
-                .statusCode(200);
+                .delete(String.valueOf(petId));
+        JsonPath jsonPath = response.jsonPath();
+
+        int code = jsonPath.get("code");
+        softAssert.assertThat(code)
+                .as("Code should be equal 200")
+                .isEqualTo(200);
+
+        String message = jsonPath.get("message");
+        softAssert.assertThat(message)
+                .as("Message should be equal " + "petId")
+                .isEqualTo(String.valueOf(petId));
+        softAssert.assertAll();
+
+        response.then()
+                .body("code", Matchers.is(200))
+                .body("message", Matchers.is(String.valueOf(petId)));
     }
 
     @Test
