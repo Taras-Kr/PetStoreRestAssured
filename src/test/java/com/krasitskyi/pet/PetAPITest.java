@@ -106,21 +106,27 @@ public class PetAPITest {
 
         String petPlainJsonObject = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(petNode);
 
+
         Response response = given()
                 .spec(requestSpecification)
                 .body(petPlainJsonObject)
                 .when()
                 .post();
 
-        response
+        ValidatableResponse validatableResponse = response
                 .then()
                 .body("id", Matchers.is(petId))
                 .body("category.id", Matchers.is(categoryId))
                 .body("category.name", Matchers.is(categoryName))
                 .body("photoUrls", Matchers.is(photoUrlsList))
                 .body("status", Matchers.is(petStatus))
-
                 .statusCode(200);
+
+        for (int i = 0; i < tagArrayNode.size(); i++) {
+            validatableResponse
+                    .body("tags[" + i + "].id", Matchers.equalTo(tagArrayNode.get(i).get("id").asInt()))
+                    .body("tags[" + i + "].name", Matchers.equalTo(tagArrayNode.get(i).get("name").asText()));
+        }
     }
 
     @Test
@@ -132,8 +138,12 @@ public class PetAPITest {
                 .when()
                 .get(String.valueOf(petId))
                 .then()
+                .log()
+                .all()
+                .statusLine("HTTP/1.1 200 OK")
+                .contentType("application/json")
                 .statusCode(200)
-                .body("id", Matchers.is(petId)) ;
+                .body("id", Matchers.is(petId));
     }
 
     @Test
