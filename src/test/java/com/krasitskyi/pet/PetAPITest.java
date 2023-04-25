@@ -23,7 +23,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import static io.restassured.RestAssured.given;
-import static org.assertj.core.api.Assertions.*;
 
 public class PetAPITest {
     private RequestSpecification requestSpecification;
@@ -33,7 +32,6 @@ public class PetAPITest {
     private int categoryId;
     private SoftAssertions softAssert = new SoftAssertions();
 
-
     @BeforeTest
     public void buildRequestSpecification() {
         requestSpecification = new RequestSpecBuilder()
@@ -41,8 +39,6 @@ public class PetAPITest {
                 .setContentType(ContentType.JSON)
                 .setBasePath("/v2/pet/")
                 .build();
-
-
     }
 
     @BeforeTest
@@ -55,13 +51,25 @@ public class PetAPITest {
     public void verifyGetPetsByStatus() {
 
         String paramStatus = "sold";
-        given()
+        Response resp = given()
                 .spec(requestSpecification)
                 .param("status", paramStatus)
                 .when()
-                .get("findByStatus")
+                .get("findByStatus");
+        resp
                 .then()
+                .statusLine("HTTP/1.1 200 OK")
+                .contentType("application/json")
                 .statusCode(200);
+
+        JsonPath jsonPath = resp.jsonPath();
+        List<Pet> allPets = jsonPath.getList("", Pet.class);
+        for (Pet pet : allPets) {
+            softAssert.assertThat(pet.getStatus())
+                    .as("Status should be equal - " + paramStatus)
+                    .isEqualTo(paramStatus);
+        }
+        softAssert.assertAll();
     }
 
     @Test
@@ -106,7 +114,6 @@ public class PetAPITest {
 
         String petPlainJsonObject = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(petNode);
 
-
         Response response = given()
                 .spec(requestSpecification)
                 .body(petPlainJsonObject)
@@ -138,8 +145,6 @@ public class PetAPITest {
                 .when()
                 .get(String.valueOf(petId))
                 .then()
-                .log()
-                .all()
                 .statusLine("HTTP/1.1 200 OK")
                 .contentType("application/json")
                 .statusCode(200)
@@ -193,7 +198,11 @@ public class PetAPITest {
                 .when()
                 .put()
                 .then()
-                .statusCode(200);
+                .statusLine("HTTP/1.1 200 OK")
+                .contentType(ContentType.JSON)
+                .statusCode(200)
+                .body("name", Matchers.is(petName))
+                .body("category.name", Matchers.is(categoryName));
     }
 
     @Test
@@ -210,7 +219,12 @@ public class PetAPITest {
                 .when()
                 .post(String.valueOf(petId))
                 .then()
-                .statusCode(200);
+
+                .statusLine("HTTP/1.1 200 OK")
+                .contentType(ContentType.JSON)
+                .statusCode(200)
+                .body("code", Matchers.is(200))
+                .body("message",Matchers.is(String.valueOf(petId)));
     }
 
     @Test
@@ -243,7 +257,11 @@ public class PetAPITest {
     @Description("Verifies API Add a new pet to the store using POJO: POST https://petstore.swagger.io/v2/pet")
     public void verifyCreatePetWithPOJO() {
         categoryId = DataGenerator.getId(1, 100);
-        Category category = Category.builder().id(categoryId).name("POJOCats").build();
+        Category category = Category.builder()
+                .id(categoryId)
+                .name(DataGenerator.getRandomValueFromList(DataGenerator.getListFromFile( petCategoriesFile)))
+                .build();
+
         Tag tag1 = Tag.builder().id(1).name("tagN1").build();
         Tag tag2 = Tag.builder().id(2).name("tagN2").build();
 
@@ -251,7 +269,7 @@ public class PetAPITest {
         Pet pet = Pet.builder()
                 .id(petId)
                 .category(category)
-                .name("KittyOBJ")
+                .name(DataGenerator.getRandomValueFromList(DataGenerator.getListFromFile(petNamesFile)))
                 .photoUrls(Arrays.asList("www.photo1.com", "www.photo2.com"))
                 .tags(Arrays.asList(tag1, tag2))
                 .status("sold")
@@ -265,5 +283,4 @@ public class PetAPITest {
                 .then()
                 .statusCode(200);
     }
-
 }
