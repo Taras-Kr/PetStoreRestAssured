@@ -1,10 +1,8 @@
 package com.krasitskyi.pet;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.krasitskyi.util.DataGenerator;
 import io.qameta.allure.Description;
 import io.qameta.allure.restassured.AllureRestAssured;
 import io.restassured.RestAssured;
@@ -19,18 +17,12 @@ import org.hamcrest.Matchers;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
-import java.util.Arrays;
-import java.util.List;
-
 import static io.restassured.RestAssured.given;
 
 public class PetAPITest {
     private RequestSpecification requestSpecification;
-    String petNamesFile = "src/test/resources/input_data/pet_names.txt";
-    String petCategoriesFile = "src/test/resources/input_data/pet_categories.txt";
     private int petId;
-    private int categoryId;
-    private SoftAssertions softAssert = new SoftAssertions();
+    private final SoftAssertions softAssert = new SoftAssertions();
 
     @BeforeTest
     public void buildRequestSpecification() {
@@ -48,7 +40,7 @@ public class PetAPITest {
 
     @Test
     @Description("Verifies API find pet by Id: GET https://petstore.swagger.io/v2/pet/findByStatus")
-    public void verifyGetPetsByStatus() {
+    public void verifyGetPetsByStatus() throws JsonProcessingException {
 
         String paramStatus = "sold";
         Response resp = given()
@@ -62,11 +54,12 @@ public class PetAPITest {
                 .contentType("application/json")
                 .statusCode(200);
 
-        JsonPath jsonPath = resp.jsonPath();
-        List<Pet> allPets = jsonPath.getList("", Pet.class);
-        for (Pet pet : allPets) {
-            softAssert.assertThat(pet.getStatus())
-                    .as("Status should be equal - " + paramStatus)
+        String responseBody = resp.body().asString();
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode jNode = objectMapper.readTree(responseBody);
+        for (int i = 0; i < jNode.size(); i++) {
+            softAssert.assertThat(jNode.get(i).get("status").asText())
+                    .as("Pet id: " + jNode.get(i).get("id").asText() + ": " + "Status should be equal " + paramStatus)
                     .isEqualTo(paramStatus);
         }
         softAssert.assertAll();
@@ -75,44 +68,8 @@ public class PetAPITest {
     @Test
     @Description("Verifies API Add a new pet to the store using Jackson: POST https://petstore.swagger.io/v2/pet")
     public void verifyCreatePetWithJacksonObj() throws JsonProcessingException {
-        petId = DataGenerator.getRandomId(100000000, 999999999);
-
-        String categoryName = DataGenerator.getRandomValueFromList(DataGenerator.getListFromFile(petCategoriesFile));
-        String petName = DataGenerator.getRandomValueFromList(DataGenerator.getListFromFile(petNamesFile));
-        List<String> photoUrlsList = Arrays.asList("www.url1.com", "www.url2.com", "www.url3.com");
-
-        String petStatus = "sold";
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        ObjectNode petNode = objectMapper.createObjectNode();
-        petNode.put("id", petId);
-
-        categoryId = DataGenerator.getId(1, 100);
-
-        ObjectNode categoryNode = objectMapper.createObjectNode();
-        categoryNode.put("id", categoryId);
-        categoryNode.put("name", categoryName);
-        petNode.set("category", categoryNode);
-
-        petNode.put("name", petName);
-        petNode.putPOJO("photoUrls", photoUrlsList);
-
-        ObjectNode tag1 = objectMapper.createObjectNode();
-        tag1.put("id", 1);
-        tag1.put("name", "tag1Name");
-        ObjectNode tag2 = objectMapper.createObjectNode();
-        tag2.put("id", 2);
-        tag2.put("name", "tag2Name");
-        ArrayNode tagArrayNode = objectMapper.createArrayNode();
-        tagArrayNode.addAll(Arrays.asList(tag1, tag2));
-        petNode.set("tags", tagArrayNode);
-
-        // Another way to add array field to json
-        // petNode.putArray("tags").addAll(Arrays.asList(tag1, tag2));
-
-        petNode.put("status", petStatus);
-
-        String petPlainJsonObject = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(petNode);
+        petId = PetGenerator.getRandomId(100000000, 999999999);
+        String petPlainJsonObject = PetGenerator.getPetPlainJsonObject(petId);
 
         Response response = given()
                 .spec(requestSpecification)
@@ -120,19 +77,20 @@ public class PetAPITest {
                 .when()
                 .post();
 
+        Pet expectedPet = PetGenerator.getPetFromPlainJsonObject(petPlainJsonObject);
         ValidatableResponse validatableResponse = response
                 .then()
-                .body("id", Matchers.is(petId))
-                .body("category.id", Matchers.is(categoryId))
-                .body("category.name", Matchers.is(categoryName))
-                .body("photoUrls", Matchers.is(photoUrlsList))
-                .body("status", Matchers.is(petStatus))
+                .body("id", Matchers.is(expectedPet.getId()))
+                .body("category.id", Matchers.is(expectedPet.getCategory().getId()))
+                .body("category.name", Matchers.is(expectedPet.getCategory().getName()))
+                .body("photoUrls", Matchers.is(expectedPet.getPhotoUrls()))
+                .body("status", Matchers.is(expectedPet.getStatus()))
                 .statusCode(200);
 
-        for (int i = 0; i < tagArrayNode.size(); i++) {
+        for (int i = 0; i < expectedPet.getTags().size(); i++) {
             validatableResponse
-                    .body("tags[" + i + "].id", Matchers.equalTo(tagArrayNode.get(i).get("id").asInt()))
-                    .body("tags[" + i + "].name", Matchers.equalTo(tagArrayNode.get(i).get("name").asText()));
+                    .body("tags[" + i + "].id", Matchers.equalTo(expectedPet.getTags().get(i).getId()))
+                    .body("tags[" + i + "].name", Matchers.equalTo(expectedPet.getTags().get(i).getName()));
         }
     }
 
@@ -153,44 +111,10 @@ public class PetAPITest {
 
     @Test
     @Description("Verifies API Update an existing pet using Jackson: PUT https://petstore.swagger.io/v2/pet/ ")
-    public void verifyUpdateExistingPetByIdWithJacksonObj() {
-        String categoryName = "Cats Upd";
-        String petName = "Kitty Cat";
-        List<String> photoUrlsList = Arrays.asList("www.url1.com", "www.url2.com", "www.url3.com");
-        String petStatus = "available";
+    public void verifyUpdateExistingPetByIdWithJacksonObj() throws JsonProcessingException {
 
-        ObjectMapper objectMapper = new ObjectMapper();
-        ObjectNode petNode = objectMapper.createObjectNode();
-        petNode.put("id", petId);
-
-        ObjectNode categoryNode = objectMapper.createObjectNode();
-        categoryNode.put("id", categoryId);
-        categoryNode.put("name", categoryName);
-        petNode.set("category", categoryNode);
-
-        petNode.put("name", petName);
-        petNode.putPOJO("photoUrls", photoUrlsList);
-
-        ObjectNode tag1 = objectMapper.createObjectNode();
-        tag1.put("id", 1);
-        tag1.put("name", "tag1Name");
-        ObjectNode tag2 = objectMapper.createObjectNode();
-        tag2.put("id", 2);
-        tag2.put("name", "tag2Name");
-        ArrayNode tagArrayNode = objectMapper.createArrayNode();
-        tagArrayNode.addAll(Arrays.asList(tag1, tag2));
-        petNode.set("tags", tagArrayNode);
-
-        // Another way to add array field to json
-        // petNode.putArray("tags").addAll(Arrays.asList(tag1, tag2));
-
-        petNode.put("status", petStatus);
-        String petPlainJsonObject;
-        try {
-            petPlainJsonObject = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(petNode);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
+        String petPlainJsonObject = PetGenerator.getPetPlainJsonObject(petId);
+        Pet expectedPet = PetGenerator.getPetFromPlainJsonObject(petPlainJsonObject);
 
         given()
                 .spec(requestSpecification)
@@ -201,8 +125,8 @@ public class PetAPITest {
                 .statusLine("HTTP/1.1 200 OK")
                 .contentType(ContentType.JSON)
                 .statusCode(200)
-                .body("name", Matchers.is(petName))
-                .body("category.name", Matchers.is(categoryName));
+                .body("name", Matchers.is(expectedPet.getName()))
+                .body("category.name", Matchers.is(expectedPet.getCategory().getName()));
     }
 
     @Test
@@ -224,7 +148,7 @@ public class PetAPITest {
                 .contentType(ContentType.JSON)
                 .statusCode(200)
                 .body("code", Matchers.is(200))
-                .body("message",Matchers.is(String.valueOf(petId)));
+                .body("message", Matchers.is(String.valueOf(petId)));
     }
 
     @Test
@@ -256,31 +180,29 @@ public class PetAPITest {
     @Test
     @Description("Verifies API Add a new pet to the store using POJO: POST https://petstore.swagger.io/v2/pet")
     public void verifyCreatePetWithPOJO() {
-        categoryId = DataGenerator.getId(1, 100);
-        Category category = Category.builder()
-                .id(categoryId)
-                .name(DataGenerator.getRandomValueFromList(DataGenerator.getListFromFile( petCategoriesFile)))
-                .build();
 
-        Tag tag1 = Tag.builder().id(1).name("tagN1").build();
-        Tag tag2 = Tag.builder().id(2).name("tagN2").build();
-
-        petId = DataGenerator.getRandomId(100000000, 999999999);
-        Pet pet = Pet.builder()
-                .id(petId)
-                .category(category)
-                .name(DataGenerator.getRandomValueFromList(DataGenerator.getListFromFile(petNamesFile)))
-                .photoUrls(Arrays.asList("www.photo1.com", "www.photo2.com"))
-                .tags(Arrays.asList(tag1, tag2))
-                .status("sold")
-                .build();
-
-        given()
+        petId = PetGenerator.getRandomId(100000000, 999999999);
+        Pet pet = PetGenerator.getPetObject(petId);
+        Response response = given()
                 .spec(requestSpecification)
                 .body(pet)
                 .when()
-                .post()
+                .post();
+        ValidatableResponse validatableResponse = response
                 .then()
-                .statusCode(200);
+                .statusLine("HTTP/1.1 200 OK")
+                .contentType(ContentType.JSON)
+                .statusCode(200)
+                .body("id", Matchers.is(pet.getId()))
+                .body("category.id", Matchers.is(pet.getCategory().getId()))
+                .body("category.name", Matchers.is(pet.getCategory().getName()))
+                .body("photoUrls", Matchers.is(pet.getPhotoUrls()))
+                .body("status", Matchers.is(pet.getStatus()));
+
+        for (int i = 0; i < pet.getTags().size(); i++) {
+            validatableResponse
+                    .body("tags[" + i + "].id", Matchers.equalTo(pet.getTags().get(i).getId()))
+                    .body("tags[" + i + "].name", Matchers.equalTo(pet.getTags().get(i).getName()));
+        }
     }
 }
