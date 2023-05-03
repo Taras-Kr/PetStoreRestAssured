@@ -1,0 +1,26 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+
+<suite name="UserApi_Suite" verbose="1">
+    <test name="UserAPI Positive tests">
+        <classes>
+            <class name="com.krasitskyi.user.UserAPITest">
+                <methods>
+                    <include name="verifyCreateUserPositive"/>
+                    <include name="verifyGetUserByUserNamePositive"/>
+                    <include name="verifyDeleteUserByUserNamePositive"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="UserAPI Negative tests">
+        <classes>
+            <class name="com.krasitskyi.user.UserAPITest">
+                <methods>
+                    <include name="verifyGetUserByUserNameNegative"/>
+                    <include name="verifyDeleteUserByUserNameNegative"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+</suite>
